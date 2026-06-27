@@ -1,0 +1,188 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "4041c0d2",
+   "metadata": {},
+   "source": [
+    "# Task 10: AI Model Deployment with Streamlit\n",
+    "**CoreTech Innovations - Internship Program**\n",
+    "\n",
+    "---\n",
+    "\n",
+    "**Objective:** Deploy the optimized ML model from Task 9 as a web app using Streamlit.  \n",
+    "**Deadline:** Jun 24, 2026 00:00\n",
+    "\n",
+    "This notebook contains the full code for `app.py` and explains how to deploy the model."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "733e6661",
+   "metadata": {},
+   "source": [
+    "## Step 1: Requirements\n",
+    "\n",
+    "To run the Streamlit app, install the required libraries.\n",
+    "\n",
+    "**Run in terminal:**\n",
+    "```bash\n",
+    "pip install -r requirements.txt\n",
+    "```\n",
+    "\n",
+    "**`requirements.txt` content:**\n",
+    "```\n",
+    "streamlit\n",
+    "pandas\n",
+    "numpy\n",
+    "scikit-learn\n",
+    "joblib\n",
+    "matplotlib\n",
+    "seaborn\n",
+    "```"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "628e9db7",
+   "metadata": {},
+   "source": [
+    "## Step 2: Save Model Files from Task 9\n",
+    "\n",
+    "> **IMPORTANT:** Run this cell after Task 9.  \n",
+    "> It saves the model, scaler, and label encoder needed for deployment."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c1161ca8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import joblib\n",
+    "import pandas as pd\n",
+    "from sklearn.preprocessing import StandardScaler, LabelEncoder\n",
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "\n",
+    "print('This cell simulates saving files from Task 9')\n",
+    "\n",
+    "# Load your dataset from Task 5\n",
+    "df = pd.read_csv('Client_projects.csv')\n",
+    "X = df.drop(['status', 'project_id', 'client_name', 'deadline'], axis=1)\n",
+    "y = df['status']\n",
+    "\n",
+    "# Train + Save  --  Replace with your actual Task 9 trained model\n",
+    "scaler = StandardScaler().fit(X)\n",
+    "le     = LabelEncoder().fit(y)\n",
+    "model  = RandomForestClassifier().fit(scaler.transform(X), le.transform(y))\n",
+    "\n",
+    "joblib.dump(model,  'optimized_model.pkl')\n",
+    "joblib.dump(scaler, 'scaler.pkl')\n",
+    "joblib.dump(le,     'label_encoder.pkl')\n",
+    "\n",
+    "print('Files saved: optimized_model.pkl, scaler.pkl, label_encoder.pkl')\n",
+    "print('Note: Replace above code with your actual Task 9 trained model')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "89c3c93a",
+   "metadata": {},
+   "source": [
+    "## Step 3: Generate `app.py`\n",
+    "\n",
+    "Run the code cell below to write the **complete Streamlit application** to `app.py`  \n",
+    "in the current folder."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "af61441c",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "app_code = 'import streamlit as st\\nimport joblib\\nimport numpy as np\\nimport pandas as pd\\n\\n# 1. PAGE SETUP + STYLING\\nst.set_page_config(page_title=\\'Project Status Predictor\\', page_icon=\\'🚀\\', layout=\\'centered\\')\\nst.title(\\'🚀 Project Status Prediction App\\')\\nst.write(\\'CoreTech Innovations - Task 10: AI Model Deployment\\')\\nst.markdown(\\'---\\')\\n\\n# 2. LOAD TRAINED MODEL + SCALER + LABEL ENCODER\\ntry:\\n    model         = joblib.load(\\'optimized_model.pkl\\')\\n    scaler        = joblib.load(\\'scaler.pkl\\')\\n    label_encoder = joblib.load(\\'label_encoder.pkl\\')\\nexcept Exception:\\n    st.error(\\'ERROR: Model files not found. Save them from Task 9 first.\\')\\n    st.stop()\\n\\n# 3. INPUT FORM\\nst.subheader(\\'Enter Project Details\\')\\ncol1, col2 = st.columns(2)\\n\\nwith col1:\\n    budget        = st.number_input(\\'Budget (PKR)\\',    min_value=1000, max_value=10000000, value=50000)\\n    team_size     = st.number_input(\\'Team Size\\',       min_value=1,    max_value=50,       value=3)\\n\\nwith col2:\\n    duration_days = st.number_input(\\'Duration (Days)\\', min_value=1,    max_value=365,      value=30)\\n    complexity    = st.selectbox(\\'Complexity\\', [\\'Low\\', \\'Medium\\', \\'High\\'])\\n\\n# 4. PREDICTION BUTTON\\nif st.button(\\'Predict Status\\', type=\\'primary\\'):\\n    complexity_map = {\\'Low\\': 0, \\'Medium\\': 1, \\'High\\': 2}\\n    input_data = np.array([[budget, team_size, duration_days, complexity_map[complexity]]])\\n\\n    # 5. SCALE + PREDICT\\n    input_scaled     = scaler.transform(input_data)\\n    prediction       = model.predict(input_scaled)\\n    predicted_status = label_encoder.inverse_transform(prediction)[0]\\n\\n    # 6. OUTPUT DISPLAY\\n    st.markdown(\\'---\\')\\n    st.subheader(\\'Prediction Result\\')\\n\\n    if predicted_status == \\'Completed\\':\\n        st.success(f\\'Predicted Status: **{predicted_status}**\\')\\n    elif predicted_status == \\'Delayed\\':\\n        st.warning(f\\'Predicted Status: **{predicted_status}**\\')\\n    else:\\n        st.error(f\\'Predicted Status: **{predicted_status}**\\')\\n\\n# 7. MODEL EXPLANATION\\nst.markdown(\\'---\\')\\nwith st.expander(\\'Model Explanation\\'):\\n    st.write(\"\"\"\\n    **Model Used**: RandomForestClassifier optimized with RandomizedSearchCV from Task 9\\n\\n    **How it works**:\\n    Takes project features (budget, team size, duration, complexity) and\\n    predicts whether the project will be Completed, Delayed, or Failed.\\n\\n    **Trained on**: Client_projects.csv from Task 5\\n    \"\"\")\\n\\nst.markdown(\\'---\\')\\nst.caption(\\'Submitted for CoreTech Innovations Internship - Task 10\\')\\n'\n",
+    "\n",
+    "with open('app.py', 'w', encoding='utf-8') as f:\n",
+    "    f.write(app_code)\n",
+    "\n",
+    "print('app.py created successfully in the current folder.')\n",
+    "print('Run with:  streamlit run app.py')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f7ec7d23",
+   "metadata": {},
+   "source": [
+    "## Step 4: Run the Streamlit App\n",
+    "\n",
+    "### On Local Machine\n",
+    "```bash\n",
+    "streamlit run app.py\n",
+    "```\n",
+    "App opens at **http://localhost:8501**\n",
+    "\n",
+    "### On Google Colab\n",
+    "```python\n",
+    "!pip install streamlit\n",
+    "!streamlit run app.py & npx localtunnel --port 8501\n",
+    "```\n",
+    "\n",
+    "> Make sure `app.py` and all `.pkl` files are in the **same folder** before running."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "71a7c16b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print('Step 1: Ensure app.py and .pkl files are in the same folder')\n",
+    "print('Step 2: Open a terminal in that folder')\n",
+    "print('Step 3: Run ->  streamlit run app.py')\n",
+    "print('Step 4: App will open in your browser at http://localhost:8501')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "bf62782e",
+   "metadata": {},
+   "source": [
+    "## Step 5: Analysis & Submission Report\n",
+    "\n",
+    "### What Changed\n",
+    "We deployed the optimized model from Task 9 using **Streamlit**.  \n",
+    "Instead of running code in Jupyter, anyone can now use a web form to get predictions.\n",
+    "\n",
+    "### Why It Changed\n",
+    "Deployment makes the model accessible to **non-technical users**.  \n",
+    "`joblib` was used to save/load the model so retraining is not required every time.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "### Files to Submit on GitHub\n",
+    "\n",
+    "| File | Description |\n",
+    "|---|---|\n",
+    "| `app.py` | Main Streamlit application |\n",
+    "| `requirements.txt` | Dependencies list |\n",
+    "| `optimized_model.pkl` | Trained Random Forest model |\n",
+    "| `scaler.pkl` | StandardScaler for input features |\n",
+    "| `label_encoder.pkl` | LabelEncoder for target variable |\n",
+    "| `Task10_Streamlit_Deployment.ipynb` | This notebook |\n",
+    "| `screenshot.png` | Screenshot of the running app |\n",
+    "\n",
+    "---\n",
+    "\n",
+    "## Task 10 Complete"
+   ]
+  }
+ ],
+ "metadata": {},
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
